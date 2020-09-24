@@ -65,12 +65,15 @@ def login(request):
         username = request.data.get('username')
         password = request.data.get('password')
         if (username is None) or (password is None):
-            return Response("username and password required")
+            return Response("username and password required",
+                            status=status.HTTP_400_BAD_REQUEST)
         user = User.objects.get(username=username)
         if (user is None):
-            return Response("username required")
+            return Response("username required",
+                            status=status.HTTP_400_BAD_REQUEST)
         if not user.check_password(password):
-            return Response("wrong password entered")
+            return Response("wrong password entered",
+                            status=status.HTTP_400_BAD_REQUEST)
         access_token_payload = {'username': 'login_' + user.username}
         access_token = jwt.encode(access_token_payload, settings.SECRET_KEY)
         redis_instance.set('login_' + username, access_token)
@@ -78,7 +81,9 @@ def login(request):
                         headers={'token': access_token},
                         status=status.HTTP_200_OK)
     except User.DoesNotExist:
-        return Response("user not registered,please register")
+        return Response("user not registered,please register",
+                        status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger.error(e)
-        return Response("Error")
+        return Response("Login Error",
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
