@@ -1,0 +1,5 @@
+.env
+.vscode/
+Parking/__pycache__/
+ParkingLotSystem/__pycache__/
+Users/__pycache__/
