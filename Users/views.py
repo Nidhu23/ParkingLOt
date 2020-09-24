@@ -6,6 +6,7 @@ from rest_framework import request
 from rest_framework.response import Response
 from rest_framework import status
 from .models import User
+from ParkingLotSystem import settings
 from rest_framework.decorators import api_view
 from . import redis_setup
 import jwt
@@ -17,6 +18,8 @@ from django.contrib.auth import login, logout
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework import exceptions
+import logging
+logger = logging.getLogger('django')
 
 
 # Create your views here.
@@ -44,3 +47,38 @@ def register(request):
     except Exception as exception:
         return Response(exception=True,
                         data={"status": status.HTTP_400_BAD_REQUEST})
+
+
+@api_view(['POST'])
+def login(request):
+    ''' 
+    API for user to login to the parking lot system
+
+    Parameters:
+    argument(1):request paramter: having username,password
+
+    Returns:
+    create access token and returns status code and message
+    '''
+    try:
+        redis_instance = redis_setup.get_redis_instance()
+        username = request.data.get('username')
+        password = request.data.get('password')
+        if (username is None) or (password is None):
+            return Response("username and password required")
+        user = User.objects.get(username=username)
+        if (user is None):
+            return Response("username required")
+        if not user.check_password(password):
+            return Response("wrong password entered")
+        access_token_payload = {'username': 'login_' + user.username}
+        access_token = jwt.encode(access_token_payload, settings.SECRET_KEY)
+        redis_instance.set('login_' + username, access_token)
+        return Response("LOGIN SUCCESSFULL",
+                        headers={'token': access_token},
+                        status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response("user not registered,please register")
+    except Exception as e:
+        logger.error(e)
+        return Response("Error")
