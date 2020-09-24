@@ -9,7 +9,9 @@ from .models import User
 from ParkingLotSystem import settings
 from rest_framework.decorators import api_view
 from . import redis_setup
+from .utils import get_user
 import jwt
+from jwt import DecodeError
 import datetime
 import redis
 from .redis_setup import get_redis_instance
@@ -86,4 +88,30 @@ def login(request):
     except Exception as e:
         logger.error(e)
         return Response("Login Error",
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def logout(request):
+    ''' 
+    Logout function
+
+    Parameters:
+    argument(1):request paramter: token in request header
+
+    Returns:
+    deletes the user from redis 
+    '''
+    try:
+        redis_instance = get_redis_instance()
+        user = get_user(request.headers.get('token'))
+        if redis_instance.delete(user) > 0:
+            return Response("logged out successfully", status=status.HTTP_200_OK)
+        return Response("Please login first",status=status.HTTP_404_NOT_FOUND)
+    except DecodeError:
+        return Response("You are not logged in",
+                        status=status.HTTP_404_NOT_FOUND)
+    except Exception as exception:
+        logger.error(exception)
+        return Response("Could not log you out",
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
