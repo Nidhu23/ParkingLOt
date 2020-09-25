@@ -2,6 +2,8 @@ from django.utils import timezone
 from .models import UnPark
 import jwt
 from ParkingLotSystem import settings
+from Users.models import User
+from .tasks import send_notification
 
 
 def un_park(instance):
@@ -51,8 +53,28 @@ def calc_charge(exit_time, instance):
     return charges
 
 
-
 def assign_slot(slots_taken):
+    ''' 
+    function that assigns slot for parking vehicle
+
+    Parameters:
+    argument(1) a set containing the values of slots that are taken
+
+    Returns:
+    total charge based on role,park and vehicle type
+    '''
     total_slots = set(range(1, 401))
     slot = list(total_slots.difference(slots_taken))
+    if len(slot) < 1:
+        send_email()
+        return 0
     return slot[0]
+
+
+def send_email():
+    user_details = User.objects.all()
+    for user in user_details:
+        print(user.role)
+        if user.role == "security" or user.role == "police":
+            send_notification.delay(user.email, user.username)
+            return 0
