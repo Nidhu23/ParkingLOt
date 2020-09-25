@@ -44,9 +44,12 @@ def role_required(roles_allowed=[]):
             try:
                 user = jwt.decode(request.headers.get('token'),
                                   settings.SECRET_KEY)
-                username = user.get('username')
-                user_details = User.objects.get(username=username).role
+                username = user.get('username').split("_", 1)
+                print(username[1])
+                user_details = User.objects.get(username=username[1]).role
+                print(user_details)
                 role = user_details.role
+                print(role)
                 if role in roles_allowed:
                     return view_func(request, *args, **kwargs)
                 else:
